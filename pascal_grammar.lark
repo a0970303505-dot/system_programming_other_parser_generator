@@ -1,0 +1,78 @@
+// ============================================================
+// Simplified Pascal Grammar — Figure 5.2
+// Written in Lark EBNF notation
+// ============================================================
+// EBNF features used:
+//   rule*   zero-or-more repetition
+//   rule+   one-or-more repetition
+//   rule?   optional
+//   (a | b) inline alternation / grouping
+// ============================================================
+
+// Rule 1 — top-level program
+prog : "PROGRAM" ID "VAR" dec_list "BEGIN" stmt_list "END" "."
+
+// Rules 3-4 — declaration list: one or more decls separated by ";"
+// EBNF: dec (";" dec)*  replaces left-recursive BNF
+dec_list : dec (";" dec)*
+
+// Rule 4 — single declaration
+dec : id_list ":" "INTEGER"
+
+// Rule 6 — identifier list: one or more IDs separated by ","
+// EBNF: ID ("," ID)*  replaces left-recursive BNF
+id_list : ID ("," ID)*
+
+// Rules 7-8 — statement list: one or more stmts separated by ";"
+// EBNF: stmt (";" stmt)*  replaces left-recursive BNF
+stmt_list : stmt (";" stmt)*
+
+// Rule 8 — statement alternatives
+stmt : assign_stmt
+     | read_stmt
+     | write_stmt
+     | for_stmt
+
+// Rule 9 — assignment
+assign_stmt : ID ":=" exp
+
+// Rules 10-12 — expressions with operator precedence
+// Lark handles precedence via rule nesting (exp → term → factor)
+// EBNF: (OP term)*  replaces left-recursive BNF chains
+// Named operators so Lark keeps them in the tree (anonymous strings get filtered)
+exp  : term ((PLUS | MINUS) term)*
+term : factor ((TIMES | DIV) factor)*
+
+// Rule 12 — factor
+factor : ID
+       | INT_LIT
+       | "(" exp ")"
+
+// Rule 13 — read
+read_stmt : "READ" "(" id_list ")"
+
+// Rule 14 — write
+write_stmt : "WRITE" "(" id_list ")"
+
+// Rules 15-16 — for loop
+// EBNF collapses index_exp into the for rule directly
+for_stmt : "FOR" ID ":=" exp "TO" exp "DO" body
+
+// Rule 17 — body
+body : stmt
+     | "BEGIN" stmt_list "END"
+
+// ── Terminals ────────────────────────────────────────────────
+// Operator terminals — named so they appear in the parse tree
+PLUS  : "+"
+MINUS : "-"
+TIMES : "*"
+DIV   : "DIV"
+
+// Literals and identifiers
+INT_LIT : /[0-9]+/
+// Keywords take lexer priority over ID (Lark string > regex at same length)
+ID      : /[a-zA-Z][a-zA-Z0-9_]*/
+
+// Whitespace ignored
+%ignore /[ \t\n\r]+/
